@@ -173,9 +173,23 @@ from tests.utility_for_tests import get_fake_nexus_simulator
       ''',
       ({'date': '01/01/2019', 'name': 'well1', 'max_avg_comp_dp': 1024.2, 'gor_limit_exponent': 9999.0, 'unit_system': UnitSystem.ENGLISH},
         )),
+    # MULT keyword with a number after it
+    ('''
+CONSTRAINTS
+well1 QOSMAX MULT      9999
+ENDCONSTRAINTS
+
+QMULT
+WELL       QOIL        QGAS        QWATER
+well1      0           0.0         0
+ENDQMULT ''',
+         ({'date': '01/01/2019', 'name': 'well1', 'use_qmult_qoil_surface_rate': True,
+    'unit_system': UnitSystem.ENGLISH, 'qmult_oil_rate': 0.0, 'qmult_gas_rate': 0.0, 'qmult_water_rate': 0.0, 'well_name':'well1'},
+          )
+     ),
     ], ids=['basic_test', 'Change in Time', 'more Keywords', 'constraint table', 'multiple constraints on same well',
-    'inline before table', 'QMULT', 'Clearing Constraints', 'activate keyword', 'GORLIM_drawdowncards'])
-def test_load_constraints(mocker, fixture_for_osstat_pathlib, file_contents, expected_content):
+    'inline before table', 'QMULT', 'Clearing Constraints', 'activate keyword', 'GORLIM_drawdowncards', 'MULT keyword with a number after it'])
+def test_load_constraints(mocker, file_contents, expected_content):
     # Arrange
     start_date = '01/01/2019'
     surface_file = NexusFile(location='surface.dat', file_content_as_list=file_contents.splitlines())
@@ -301,7 +315,7 @@ def test_load_constraints(mocker, fixture_for_osstat_pathlib, file_contents, exp
      'uuid2': [3, 8]}
     ),
         ], ids=['basic_test', 'two tables', 'several constraints for one well', 'constraint_table', 'qmults'])
-def test_constraint_ids(mocker, fixture_for_osstat_pathlib, file_contents, object_locations):
+def test_constraint_ids(mocker, file_contents, object_locations):
     # Arrange
     fcs_file_data = '''RUN_UNITS ENGLISH
 
@@ -339,14 +353,18 @@ def test_constraint_ids(mocker, fixture_for_osstat_pathlib, file_contents, objec
 
 def test_nexus_constraint_repr(mocker):
     # Arrange
-    mocker.patch.object(uuid, 'uuid4', side_effect=['uuid0'])
-    constraint = NexusConstraint({'date': '01/01/2019', 'name': 'well1', 'max_surface_liquid_rate': 3884.0, 'max_surface_water_rate': 0})
-    # patch the uuid to make the test deterministic
-    expected_repr = ("NexusConstraint(_DataObjectMixin__id='uuid0', date='01/01/2019', name='well1', max_surface_liquid_rate=3884.0, max_surface_water_rate=0)")
+    # patch the uuid
+    mocker.patch('uuid.uuid4', return_value='uuid1')
+    constraint = NexusConstraint({'date': '01/01/2019', 'name': 'well1', 'max_surface_liquid_rate': 3884.0,
+                                  'max_surface_water_rate': 0})
+    expected_repr = ("NexusConstraint(_DataObjectMixin__id='uuid1', date='01/01/2019', name='well1', max_surface_liquid_rate=3884.0, "
+                     "max_surface_water_rate=0)")
+    expected_str = ("NexusConstraint(date='01/01/2019', name='well1', max_surface_liquid_rate=3884.0, "
+                     "max_surface_water_rate=0)")
     # Act
     repr_result = constraint.__repr__()
     str_result = constraint.__str__()
 
     # Assert
     assert repr_result == expected_repr
-    assert str_result == expected_repr
+    assert str_result == expected_str

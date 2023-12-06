@@ -12,15 +12,25 @@ from typing import Sequence, Optional
 
 @dataclass(kw_only=True)
 class Wells(ABC):
-    __wells: list[Well] = field(default_factory=list)
+    _wells: Sequence[Well] = field(default_factory=list)
+    _wells_loaded: bool = False
+
+    def __init__(self, assume_loaded: bool = False) -> None:
+        self._wells_loaded = assume_loaded
+        self._wells = []
 
     @property
-    def wells(self):
-        return self.__wells
+    def wells(self) -> Sequence[Well]:
+        if not self._wells_loaded:
+            self._load()
+        return self._wells
 
     @wells.setter
-    def wells(self, value):
-        self.__wells = value
+    def wells(self, value) -> None:
+        self._wells = value
+
+    def _load(self) -> None:
+        raise NotImplementedError("Implement this in the derived class")
 
     def get_all(self) -> Sequence[Well]:
         raise NotImplementedError("Implement this in the derived class")
@@ -29,9 +39,6 @@ class Wells(ABC):
         raise NotImplementedError("Implement this in the derived class")
 
     def get_df(self) -> pd.DataFrame:
-        raise NotImplementedError("Implement this in the derived class")
-
-    def get_wells_overview(self) -> str:
         raise NotImplementedError("Implement this in the derived class")
 
     def modify(self, well_name: str, completion_properties_list: list[dict[str, None | float | int | str]],
@@ -52,6 +59,27 @@ class Wells(ABC):
                           completion_id: Optional[UUID] = None,
                           comments: Optional[str] = None) -> None:
         raise NotImplementedError("Implement this in the derived class")
+
+    def get_wells_overview(self) -> str:
+        if not self._wells_loaded:
+            self._load()
+
+        overview: str = ''
+        for well in self._wells:
+            overview += well.printable_well_info
+
+        return overview
+
+    def get_wells_dates(self) -> set[str]:
+        """Returns a set of the unique dates in the wellspec file over all wells."""
+        if not self._wells_loaded:
+            self._load()
+
+        set_dates: set[str] = set()
+        for well in self._wells:
+            set_dates.update(set(well.dates_of_completions))
+
+        return set_dates
 
     @property
     def table_header(self) -> str:

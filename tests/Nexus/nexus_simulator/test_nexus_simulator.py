@@ -33,7 +33,7 @@ from tests.multifile_mocker import mock_multiple_files
 
 def mock_multiple_opens(mocker, filename, fcs_file_contents, run_control_contents, include_contents,
                         run_control_mock=None, include_file_mock=None, log_file_mock=None, structured_grid_mock=None,
-                        surface_1_mock=None, surface_2_mock=None):
+                        surface_1_mock=None, surface_2_mock=None, wellspec_mock=None):
     """Mock method that returns different test file contents depending upon the file name"""
     if "fcs" in filename:
         file_contents = fcs_file_contents
@@ -51,6 +51,8 @@ def mock_multiple_opens(mocker, filename, fcs_file_contents, run_control_content
         return log_file_mock
     elif "structured_grid" in filename:
         return structured_grid_mock
+    elif "wellspec" in filename:
+        return wellspec_mock
     else:
         raise FileNotFoundError(filename)
     open_mock = mocker.mock_open(read_data=file_contents)
@@ -110,7 +112,7 @@ def check_file_read_write_is_correct_for_windows(expected_file_contents: str, mo
         # Providing a relative path to the fcs file + Non-USA date format
         ("run/control/path", "testpath1", "run/control/path", "DD/MM/YYYY", DateFormat.DD_MM_YYYY)
     ])
-def test_load_fcs_file_no_output_no_include_file(mocker, fixture_for_osstat_pathlib, run_control_path, expected_root, expected_run_control_path,
+def test_load_fcs_file_no_output_no_include_file(mocker, run_control_path, expected_root, expected_run_control_path,
                                                  date_format, expected_date_format):
     # Arrange
     fcs_file = f"RUNCONTROL {run_control_path}\nDATEFORMAT {date_format}\n"
@@ -132,7 +134,7 @@ def test_load_fcs_file_no_output_no_include_file(mocker, fixture_for_osstat_path
         # Providing a relative path to the fcs file + Non-USA date format
         ("run/control/path", "testpath1", "run/control/path", "DD/MM/YYYY", DateFormat.DD_MM_YYYY)
     ])
-def test_load_fcs_space_in_filename(mocker, fixture_for_osstat_pathlib, run_control_path, expected_root, expected_run_control_path,
+def test_load_fcs_space_in_filename(mocker, run_control_path, expected_root, expected_run_control_path,
                                     date_format, expected_date_format):
     # Arrange
     fcs_file = f"RUNCONTROL {run_control_path}\nDATEFORMAT {date_format}\n"
@@ -156,7 +158,7 @@ def test_load_fcs_space_in_filename(mocker, fixture_for_osstat_pathlib, run_cont
         ("RUNCONTROL c:\path\to\run\control\n  DATE_FORMAT DD/MM/YYYY", DateFormat.DD_MM_YYYY),
         ("RUNCONTROL c:\path\to\run\control\n", DateFormat.MM_DD_YYYY),
     ], ids=['US date format', 'non-us date format', 'default (us format)', 'Win US Date Format', 'Win non-us date format', 'Win default (us format)', ])
-def test_load_fcs_date_format(mocker, fixture_for_osstat_pathlib, fcs_file_contents, expected_date_format):
+def test_load_fcs_date_format(mocker, fcs_file_contents, expected_date_format):
     # Arrange
     open_mock = mocker.mock_open(read_data=fcs_file_contents)
     mocker.patch("builtins.open", open_mock)
@@ -259,7 +261,7 @@ def test_get_users_with_files_for_multiple_files(mocker):
     assert result == expected_result
 
 
-def test_load_fcs_file_comment_after_declaration(mocker, fixture_for_osstat_pathlib):
+def test_load_fcs_file_comment_after_declaration(mocker):
     """Check that the code ignores lines with comments that contain tokens"""
     # Arrange
     fcs_file = "!RUNCONTROL run_control_1\n RUNCONTROL run_control_2.inc\nDATEFORMAT DD/MM/YYYY\n!DATEFORMAT MM/DD/YYYY"
@@ -382,7 +384,7 @@ def test_output_to_existing_directory(mocker):
                                      'DESC Test model\n\nRUN_UNITS ENGLISH\n\ndefault_Units Metbar\nDATEFORMAT MM/DD/YYYY\n\nGRID_FILES\n\tSTRUCTURED_GRID\tIncludes/grid_data/main_grid.dat',
                                      UnitSystem.METBAR),
                          ])
-def test_load_fcs_file_populates_default_units(mocker, fixture_for_osstat_pathlib, fcs_file, expected_default_unit_value):
+def test_load_fcs_file_populates_default_units(mocker, fcs_file, expected_default_unit_value):
     # Arrange
     open_mock = mocker.mock_open(read_data=fcs_file)
     mocker.patch("builtins.open", open_mock)
@@ -400,7 +402,7 @@ def test_load_fcs_file_populates_default_units(mocker, fixture_for_osstat_pathli
                              'DESC Test model\n\nRUN_UNITS ENGLISH\n\nDEFAULT_UNITS NOTVALID\nDATEFORMAT MM/DD/YYYY\n\nGRID_FILES\n\tSTRUCTURED_GRID\tIncludes/grid_data/main_grid.dat',
                              'DESC Test model\n\nRUN_UNITS ENGLISH\n\nDEFAULT_UNITS \nDATEFORMAT MM/DD/YYYY\n\nGRID_FILES\n\tSTRUCTURED_GRID\tIncludes/grid_data/main_grid.dat'
                          ])
-def test_load_fcs_file_raises_error_for_undefined_default_units(mocker, fixture_for_osstat_pathlib, fcs_file):
+def test_load_fcs_file_raises_error_for_undefined_default_units(mocker, fcs_file):
     # Arrange
     open_mock = mocker.mock_open(read_data=fcs_file)
     mocker.patch("builtins.open", open_mock)
@@ -427,7 +429,7 @@ def test_load_fcs_file_raises_error_for_undefined_default_units(mocker, fixture_
                                      'DESC Test model\n\nDEFAULT_UNITS ENGLISH\nDATEFORMAT MM/DD/YYYY\n\nGRID_FILES\n\tSTRUCTURED_GRID\tIncludes/grid_data/main_grid.dat',
                                      UnitSystem.ENGLISH)
                          ])
-def test_load_fcs_file_populates_run_units(mocker, fixture_for_osstat_pathlib, fcs_file, expected_run_unit_value):
+def test_load_fcs_file_populates_run_units(mocker, fcs_file, expected_run_unit_value):
     # Arrange
     open_mock = mocker.mock_open(read_data=fcs_file)
     mocker.patch("builtins.open", open_mock)
@@ -446,7 +448,7 @@ def test_load_fcs_file_populates_run_units(mocker, fixture_for_osstat_pathlib, f
                              'DESC Test model\n\nRUN_UNITs \nDEFAULT_UNITS ENGLISH\nDATEFORMAT MM/DD/YYYY\n\nGRID_FILES\n\tSTRUCTURED_GRID\tIncludes/grid_data/main_grid.dat'
                              'DESC Test model\n\nRUN_UNITs 1\nDEFAULT_UNITS ENGLISH\nDATEFORMAT MM/DD/YYYY\n\nGRID_FILES\n\tSTRUCTURED_GRID\tIncludes/grid_data/main_grid.dat'
                          ])
-def test_load_fcs_file_raises_error_for_undefined_run_units(mocker, fixture_for_osstat_pathlib, fcs_file):
+def test_load_fcs_file_raises_error_for_undefined_run_units(mocker, fcs_file):
     # Arrange
     open_mock = mocker.mock_open(read_data=fcs_file)
     mocker.patch("builtins.open", open_mock)
@@ -470,7 +472,7 @@ def test_load_fcs_file_raises_error_for_undefined_run_units(mocker, fixture_for_
                                  'RUNCONTROL run_control.inc\nDATEFORMAT DD/MM/YYYY\nSURFACE NETWORK 1 	nexus_data\\Includes\\nexus_data\\surface_simplified_06082018.inc',
                                  'testpath1', 'nexus_data\\Includes\\nexus_data\\surface_simplified_06082018.inc')
                          ])
-def test_get_abs_surface_file_path(mocker, fixture_for_osstat_pathlib, fcs_file, expected_root, expected_extracted_path):
+def test_get_abs_surface_file_path(mocker, fcs_file, expected_root, expected_extracted_path):
     # Arrange
     open_mock = mocker.mock_open(read_data=fcs_file)
     mocker.patch("builtins.open", open_mock)
@@ -545,9 +547,16 @@ def test_get_check_oil_gas_types_for_models_different_types(mocker):
                               "line 1\nline 2\nGASWATER",
                               "line 1\nGASWATER",
                               "GASWATER"
-                              )
-                         ])
-def test_get_check_oil_gas_types_for_models_same_types(mocker, fixture_for_osstat_pathlib, fcs_file_contents_1, fcs_file_contents_2,
+                              ),
+                             ("Line 1\nAnother LIne\nSURFACE Network 1	Includes/nexus_data/surface_1.dat",
+                              "SURFACE Network 1	Includes/nexus_data/surface_2.dat",
+                              "line 1\nAPI",
+                                "line 1\nAPI",
+                                "API"
+                              ),
+
+])
+def test_get_check_oil_gas_types_for_models_same_types(mocker, fcs_file_contents_1, fcs_file_contents_2,
                                                        surface_file_contents_1, surface_file_contents_2, expected_type):
     # Checks that the correct oil / gas type is returned.
     # Arrange
@@ -589,7 +598,7 @@ def test_get_check_oil_gas_types_for_models_same_types(mocker, fixture_for_ossta
                               ""
                               )
                          ])
-def test_get_check_oil_gas_types_for_models_no_type_found(mocker, fixture_for_osstat_pathlib, fcs_file_contents_1, fcs_file_contents_2,
+def test_get_check_oil_gas_types_for_models_no_type_found(mocker, fcs_file_contents_1, fcs_file_contents_2,
                                                           surface_file_contents_1, surface_file_contents_2,
                                                           expected_type):
     # Checks that the correct oil / gas type is returned.
@@ -607,7 +616,7 @@ def test_get_check_oil_gas_types_for_models_no_type_found(mocker, fixture_for_os
     with pytest.raises(ValueError):
         NexusSimulator.get_check_oil_gas_types_for_models(models)
 
-def test_get_check_oil_gas_types_for_models_different_types(mocker, fixture_for_osstat_pathlib):
+def test_get_check_oil_gas_types_for_models_different_types(mocker):
     # Checks that a Value error is raised if the surface files contain different oil / gas types
     # Arrange
     models = ['path/to/model1.fcs', 'path/to/another/model2.fcs']
@@ -705,7 +714,7 @@ TOKENNOVALUE """,
                          ids=["basic case", "standard value change", "token not present (add to start)",
                               "token not present (add to end)",
                               "token not present and has no value"])
-def test_update_token_file_value(mocker, fixture_for_osstat_pathlib, original_file_contents, expected_file_contents, token, new_value,
+def test_update_token_file_value(mocker, original_file_contents, expected_file_contents, token, new_value,
                                  add_to_start):
     """Test the update token value functionality"""
     # Arrange
@@ -805,7 +814,7 @@ TOKENNOVALUE """,
                          ids=["basic case", "standard value change", "token not present (add to start)",
                               "token not present (add to end)",
                               "token not present and has no value"])
-def test_update_token_file_value(mocker, fixture_for_osstat_pathlib, original_file_contents, expected_file_contents, token, new_value,
+def test_update_token_file_value(mocker, original_file_contents, expected_file_contents, token, new_value,
                                  add_to_start):
     """Test the update token value functionality"""
     # Arrange
@@ -854,7 +863,7 @@ GRIDSOLVER IMPLICIT_COUPLING NONE
 VIPUNITS""",
                               "METHOD")
                          ], ids=["standard comment out", "Larger file"])
-def test_comment_out_file_value(mocker, fixture_for_osstat_pathlib, original_file_contents, expected_file_contents, token):
+def test_comment_out_file_value(mocker, original_file_contents, expected_file_contents, token):
     """Testing the functionality to comment out a line containing a specific token"""
     # Arrange
     mock_original_opens = mocker.mock_open()
@@ -901,7 +910,7 @@ GRIDSOLVER IMPLICIT_COUPLING NONE
 VIPUNITS""",
                               "METHOD")
                          ], ids=["standard comment out", "Larger file"])
-def test_comment_out_file_value(mocker, fixture_for_osstat_pathlib, original_file_contents, expected_file_contents, token):
+def test_comment_out_file_value(mocker, original_file_contents, expected_file_contents, token):
     """Testing the functionality to comment out a line containing a specific token"""
     # Arrange
     mock_original_opens = mocker.mock_open()
@@ -921,7 +930,7 @@ def test_comment_out_file_value(mocker, fixture_for_osstat_pathlib, original_fil
                                      modifying_mock_open=modifying_mock_open,
                                      mocker_fixture=mocker)
 
-def test_add_map_statements(mocker, fixture_for_osstat_pathlib):
+def test_add_map_statements(mocker):
     """Testing the functionality to comment out a line containing a specific token"""
     # Arrange
 
@@ -974,7 +983,7 @@ PLOTBINARY
                                      modifying_mock_open=modifying_mock_open,
                                      mocker_fixture=mocker)
 
-def test_add_map_statements_windows(mocker, fixture_for_osstat_pathlib):
+def test_add_map_statements_windows(mocker):
     """Testing the functionality to comment out a line containing a specific token"""
     # Arrange
 
@@ -1033,7 +1042,7 @@ PLOTBINARY
        WelLS sEt 1 my/wellspec/file.dat
     """)
 ], ids=['path_after_set'])
-def test_get_all(mocker: MockerFixture, fixture_for_osstat_pathlib, fcs_file_contents: str):
+def test_get_all(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to load in and retrieve a set of wells"""
     # Arrange
     fcs_file_open = mocker.mock_open(read_data=fcs_file_contents)
@@ -1047,7 +1056,7 @@ def test_get_all(mocker: MockerFixture, fixture_for_osstat_pathlib, fcs_file_con
                               unit_system=UnitSystem.ENGLISH)]
 
     # mock out the load_wells function as that is tested elsewhere
-    mock_load_wells = mocker.Mock(return_value=loaded_wells)
+    mock_load_wells = mocker.Mock(return_value=(loaded_wells, ''))
     mocker.patch('ResSimpy.Nexus.NexusWells.load_wells', mock_load_wells)
 
     # NB file_content_as_list needs to be set as below due to the mocker open re-reading fcs contents
@@ -1064,14 +1073,14 @@ def test_get_all(mocker: MockerFixture, fixture_for_osstat_pathlib, fcs_file_con
     assert result == loaded_wells
     mock_load_wells.assert_called_once_with(nexus_file=expected_well_file,
                                             default_units=UnitSystem.ENGLISH,
-                                            start_date='', date_format=DateFormat.MM_DD_YYYY)
+                                            start_date='', model_date_format=DateFormat.MM_DD_YYYY)
 
 @pytest.mark.parametrize("fcs_file_contents", [
     ("""
        WelLS sEt 1 my\wellspec\file.dat
     """)
 ], ids=['path_after_set'])
-def test_get_wells_windows(mocker: MockerFixture, fixture_for_osstat_pathlib, fcs_file_contents: str):
+def test_get_wells_windows(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to load in and retrieve a set of wells"""
     # Arrange
     fcs_file_open = mocker.mock_open(read_data=fcs_file_contents)
@@ -1085,7 +1094,7 @@ def test_get_wells_windows(mocker: MockerFixture, fixture_for_osstat_pathlib, fc
                               unit_system=UnitSystem.ENGLISH)]
 
     # mock out the load_wells function as that is tested elsewhere
-    mock_load_wells = mocker.Mock(return_value=loaded_wells)
+    mock_load_wells = mocker.Mock(return_value=(loaded_wells, ''))
     mocker.patch('ResSimpy.Nexus.NexusWells.load_wells', mock_load_wells)
 
     # NB file_content_as_list needs to be set as below due to the mocker open re-reading fcs contents
@@ -1102,10 +1111,10 @@ def test_get_wells_windows(mocker: MockerFixture, fixture_for_osstat_pathlib, fc
     assert result == loaded_wells
     mock_load_wells.assert_called_once_with(nexus_file=expected_well_file,
                                             default_units=UnitSystem.ENGLISH,
-                                            start_date='', date_format = DateFormat.MM_DD_YYYY)
+                                            start_date='', model_date_format = DateFormat.MM_DD_YYYY)
 
 
-def test_get_df(mocker: MockerFixture, fixture_for_osstat_pathlib):
+def test_get_df(mocker: MockerFixture):
     # Arrange
     fcs_file_contents = """
        WelLS sEt 1 my/wellspec/file.dat
@@ -1128,7 +1137,7 @@ def test_get_df(mocker: MockerFixture, fixture_for_osstat_pathlib):
     loaded_wells_df = loaded_wells_df.astype(
         {'well_radius': 'float64', 'i': 'int64', 'j': 'int64', 'k': 'int64'})
 
-    mock_load_wells = mocker.Mock(return_value=loaded_wells)
+    mock_load_wells = mocker.Mock(return_value=(loaded_wells, ''))
     mocker.patch('ResSimpy.Nexus.NexusWells.load_wells', mock_load_wells)
     simulation = NexusSimulator(origin='nexus_run.fcs')
     # Act
@@ -1143,7 +1152,7 @@ def test_get_df(mocker: MockerFixture, fixture_for_osstat_pathlib):
        WelLS set 1 my/wellspec/file.dat
     """)
 ], ids=['basic case'])
-def test_get(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to load in and retrieve a single wells."""
     # Arrange
     fcs_file_open = mocker.mock_open(read_data=fcs_file_contents)
@@ -1160,7 +1169,7 @@ def test_get(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_p
                     ]
 
     # mock out the load_wells function as that is tested elsewhere
-    mock_load_wells = mocker.Mock(return_value=loaded_wells)
+    mock_load_wells = mocker.Mock(return_value=(loaded_wells, ''))
     mocker.patch('ResSimpy.Nexus.NexusWells.load_wells', mock_load_wells)
 
     # NB file_content_as_list needs to be set as below due to the mocker open re-reading fcs contents
@@ -1177,13 +1186,13 @@ def test_get(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_p
     assert result == loaded_wells[1]
     mock_load_wells.assert_called_once_with(nexus_file=expected_well_file,
                                             default_units=UnitSystem.ENGLISH,
-                                            start_date='', date_format = DateFormat.MM_DD_YYYY)
+                                            start_date='', model_date_format = DateFormat.MM_DD_YYYY)
 @pytest.mark.parametrize("fcs_file_contents", [
     ("""
        WelLS set 1 my\\wellspec\\file.dat
     """)
 ], ids=['basic case'])
-def test_get_well_windows(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_well_windows(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to load in and retrieve a single wells."""
     # Arrange
     fcs_file_open = mocker.mock_open(read_data=fcs_file_contents)
@@ -1200,7 +1209,7 @@ def test_get_well_windows(mocker: MockerFixture, fcs_file_contents: str, fixture
                     ]
 
     # mock out the load_wells function as that is tested elsewhere
-    mock_load_wells = mocker.Mock(return_value=loaded_wells)
+    mock_load_wells = mocker.Mock(return_value=(loaded_wells, ''))
     mocker.patch('ResSimpy.Nexus.NexusWells.load_wells', mock_load_wells)
 
     # NB file_content_as_list needs to be set as below due to the mocker open re-reading fcs contents
@@ -1217,7 +1226,7 @@ def test_get_well_windows(mocker: MockerFixture, fcs_file_contents: str, fixture
     assert result == loaded_wells[1]
     mock_load_wells.assert_called_once_with(nexus_file=expected_well_file,
                                             default_units=UnitSystem.ENGLISH,
-                                            start_date='', date_format = DateFormat.MM_DD_YYYY)
+                                            start_date='', model_date_format = DateFormat.MM_DD_YYYY)
 
 
 @pytest.mark.parametrize("fcs_file_contents", [
@@ -1228,7 +1237,7 @@ def test_get_well_windows(mocker: MockerFixture, fcs_file_contents: str, fixture
        Pvt METHOD 3 my/pvt/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_pvt(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_pvt(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve pvt methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1249,9 +1258,9 @@ def test_get_pvt(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osst
         pvt_file.line_locations = [(0, uuid.uuid4())]
         pvt_files.append(pvt_file)
 
-    loaded_pvt = {1: NexusPVTMethod(file=pvt_files[0], input_number=1),
-                  2: NexusPVTMethod(file=pvt_files[1], input_number=2),
-                  3: NexusPVTMethod(file=pvt_files[2], input_number=3),
+    loaded_pvt = {1: NexusPVTMethod(file=pvt_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                  2: NexusPVTMethod(file=pvt_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                  3: NexusPVTMethod(file=pvt_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH),
                   }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1270,7 +1279,7 @@ def test_get_pvt(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osst
        Separator METHOD 3 my/separator/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_separator(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_separator(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve separator methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1291,9 +1300,9 @@ def test_get_separator(mocker: MockerFixture, fcs_file_contents: str, fixture_fo
         sep_file.line_locations = [(0, uuid.uuid4())]
         sep_files.append(sep_file)
 
-    loaded_sep = {1: NexusSeparatorMethod(file=sep_files[0], input_number=1),
-                  2: NexusSeparatorMethod(file=sep_files[1], input_number=2),
-                  3: NexusSeparatorMethod(file=sep_files[2], input_number=3),
+    loaded_sep = {1: NexusSeparatorMethod(file=sep_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                  2: NexusSeparatorMethod(file=sep_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                  3: NexusSeparatorMethod(file=sep_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH),
                   }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1313,7 +1322,7 @@ def test_get_separator(mocker: MockerFixture, fcs_file_contents: str, fixture_fo
        Water METHOD 3 my/water/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_water(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_water(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve water methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1334,9 +1343,9 @@ def test_get_water(mocker: MockerFixture, fcs_file_contents: str, fixture_for_os
         wat_file.line_locations = [(0, uuid.uuid4())]
         wat_files.append(wat_file)
 
-    loaded_wat = {1: NexusWaterMethod(file=wat_files[0], input_number=1),
-                  2: NexusWaterMethod(file=wat_files[1], input_number=2),
-                  3: NexusWaterMethod(file=wat_files[2], input_number=3),
+    loaded_wat = {1: NexusWaterMethod(file=wat_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                  2: NexusWaterMethod(file=wat_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                  3: NexusWaterMethod(file=wat_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH),
                   }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1358,7 +1367,7 @@ def test_get_water(mocker: MockerFixture, fcs_file_contents: str, fixture_for_os
        Equil METHOD 3 my/equil/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_equil(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_equil(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve equilibration methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1379,9 +1388,9 @@ def test_get_equil(mocker: MockerFixture, fcs_file_contents: str, fixture_for_os
         eq_file.line_locations = [(0, uuid.uuid4())]
         eq_files.append(eq_file)
 
-    loaded_equil = {1: NexusEquilMethod(file=eq_files[0], input_number=1),
-                    2: NexusEquilMethod(file=eq_files[1], input_number=2),
-                    3: NexusEquilMethod(file=eq_files[2], input_number=3)
+    loaded_equil = {1: NexusEquilMethod(file=eq_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                    2: NexusEquilMethod(file=eq_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                    3: NexusEquilMethod(file=eq_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH)
                     }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1401,7 +1410,7 @@ def test_get_equil(mocker: MockerFixture, fcs_file_contents: str, fixture_for_os
        Rock METHOD 3 my/rock/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_rock(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_rock(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve rock properties methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1422,9 +1431,9 @@ def test_get_rock(mocker: MockerFixture, fcs_file_contents: str, fixture_for_oss
         rock_file.line_locations = [(0, uuid.uuid4())]
         rock_files.append(rock_file)
 
-    loaded_rocks = {1: NexusRockMethod(file=rock_files[0], input_number=1),
-                    2: NexusRockMethod(file=rock_files[1], input_number=2),
-                    3: NexusRockMethod(file=rock_files[2], input_number=3),
+    loaded_rocks = {1: NexusRockMethod(file=rock_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                    2: NexusRockMethod(file=rock_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                    3: NexusRockMethod(file=rock_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH),
                     }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1444,7 +1453,7 @@ def test_get_rock(mocker: MockerFixture, fcs_file_contents: str, fixture_for_oss
        RelPm METHOD 3 my/relpm/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_relperm(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_relperm(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve relative permeability and
     capillary pressure methods from Nexus fcs file.
     """
@@ -1467,9 +1476,9 @@ def test_get_relperm(mocker: MockerFixture, fcs_file_contents: str, fixture_for_
         relpm_file.line_locations = [(0, uuid.uuid4())]
         relpm_files.append(relpm_file)
 
-    loaded_relperms = {1: NexusRelPermMethod(file=relpm_files[0], input_number=1),
-                       2: NexusRelPermMethod(file=relpm_files[1], input_number=2),
-                       3: NexusRelPermMethod(file=relpm_files[2], input_number=3),
+    loaded_relperms = {1: NexusRelPermMethod(file=relpm_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                       2: NexusRelPermMethod(file=relpm_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                       3: NexusRelPermMethod(file=relpm_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH),
                        }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1489,7 +1498,7 @@ def test_get_relperm(mocker: MockerFixture, fcs_file_contents: str, fixture_for_
        Valve METHOD 3 my/valve/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_valve(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_valve(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve valve methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1510,9 +1519,9 @@ def test_get_valve(mocker: MockerFixture, fcs_file_contents: str, fixture_for_os
         valve_file.line_locations = [(0, uuid.uuid4())]
         valve_files.append(valve_file)
 
-    loaded_valves = {1: NexusValveMethod(file=valve_files[0], input_number=1),
-                     2: NexusValveMethod(file=valve_files[1], input_number=2),
-                     3: NexusValveMethod(file=valve_files[2], input_number=3),
+    loaded_valves = {1: NexusValveMethod(file=valve_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                     2: NexusValveMethod(file=valve_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                     3: NexusValveMethod(file=valve_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH),
                      }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1531,7 +1540,7 @@ def test_get_valve(mocker: MockerFixture, fcs_file_contents: str, fixture_for_os
        Aquifer METHOD 3 my/aquifer/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_aquifer(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_aquifer(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve aquifer methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1552,9 +1561,9 @@ def test_get_aquifer(mocker: MockerFixture, fcs_file_contents: str, fixture_for_
         aq_file.line_locations = [(0, uuid.uuid4())]
         aq_files.append(aq_file)
 
-    loaded_aquifers = {1: NexusAquiferMethod(file=aq_files[0], input_number=1),
-                       2: NexusAquiferMethod(file=aq_files[1], input_number=2),
-                       3: NexusAquiferMethod(file=aq_files[2], input_number=3)
+    loaded_aquifers = {1: NexusAquiferMethod(file=aq_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                       2: NexusAquiferMethod(file=aq_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                       3: NexusAquiferMethod(file=aq_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH)
                        }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1573,7 +1582,7 @@ def test_get_aquifer(mocker: MockerFixture, fcs_file_contents: str, fixture_for_
        Hyd METHOD 3 my/hyd/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_hydraulics(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_hydraulics(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve hydraulics methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1594,9 +1603,9 @@ def test_get_hydraulics(mocker: MockerFixture, fcs_file_contents: str, fixture_f
         hyd_file.line_locations = [(0, uuid.uuid4())]
         hyd_files.append(hyd_file)
 
-    loaded_hyds = {1: NexusHydraulicsMethod(file=hyd_files[0], input_number=1),
-                   2: NexusHydraulicsMethod(file=hyd_files[1], input_number=2),
-                   3: NexusHydraulicsMethod(file=hyd_files[2], input_number=3)
+    loaded_hyds = {1: NexusHydraulicsMethod(file=hyd_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                   2: NexusHydraulicsMethod(file=hyd_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                   3: NexusHydraulicsMethod(file=hyd_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH)
                    }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1614,7 +1623,7 @@ def test_get_hydraulics(mocker: MockerFixture, fcs_file_contents: str, fixture_f
        Gaslift METHOD 3 my/gaslift/file3.dat
     """)
 ], ids=['basic case'])
-def test_get_gaslift(mocker: MockerFixture, fcs_file_contents: str, fixture_for_osstat_pathlib):
+def test_get_gaslift(mocker: MockerFixture, fcs_file_contents: str):
     """Testing the functionality to retrieve gaslift methods from Nexus fcs file."""
     # Arrange
     mocker.patch.object(uuid, 'uuid4', return_value='uuid')
@@ -1635,9 +1644,9 @@ def test_get_gaslift(mocker: MockerFixture, fcs_file_contents: str, fixture_for_
         gl_file.line_locations = [(0, uuid.uuid4())]
         gl_files.append(gl_file)
 
-    loaded_gaslift = {1: NexusGasliftMethod(file=gl_files[0], input_number=1),
-                      2: NexusGasliftMethod(file=gl_files[1], input_number=2),
-                      3: NexusGasliftMethod(file=gl_files[2], input_number=3)
+    loaded_gaslift = {1: NexusGasliftMethod(file=gl_files[0], input_number=1, model_unit_system=UnitSystem.ENGLISH),
+                      2: NexusGasliftMethod(file=gl_files[1], input_number=2, model_unit_system=UnitSystem.ENGLISH),
+                      3: NexusGasliftMethod(file=gl_files[2], input_number=3, model_unit_system=UnitSystem.ENGLISH)
                       }
 
     simulation = NexusSimulator(origin='path/nexus_run.fcs')
@@ -1733,7 +1742,7 @@ C          node1         NA        NA    80    100.5 200.8   1     station      
 'well_name':'GUN_P'},
          ),
      ])
-def test_load_surface_file(mocker, fixture_for_osstat_pathlib, fcs_file_contents, surface_file_content, node1_props, node2_props,
+def test_load_surface_file(mocker, fcs_file_contents, surface_file_content, node1_props, node2_props,
     connection1_props, connection2_props, wellconprops1, wellconprops2, wellheadprops1, wellheadprops2,
     wellboreprops1, wellboreprops2, constraint_props1, constraint_props2):
     # Arrange

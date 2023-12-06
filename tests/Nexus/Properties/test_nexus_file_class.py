@@ -1,6 +1,6 @@
 import os
 import uuid
-import warnings
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -28,7 +28,7 @@ def mock_different_includes(mocker, filename, test_file_contents, inc_file_conte
     return open_mock
 
 
-def test_generate_file_include_structure_basic(mocker, fixture_for_osstat_pathlib):
+def test_generate_file_include_structure_basic(mocker):
     # Arrange
     file_path = 'test_file_path.dat'
     test_file_contents = 'basic_file INCLUDE inc_file1.inc'
@@ -64,7 +64,7 @@ def test_generate_file_include_structure_basic(mocker, fixture_for_osstat_pathli
     assert nexus_file == expected_nexus_file
 
 
-def test_generate_file_include_structure_multiple_includes(mocker, fixture_for_osstat_pathlib):
+def test_generate_file_include_structure_multiple_includes(mocker):
     # Arrange
     file_path = 'test_file_path.dat'
     test_file_contents = (
@@ -104,7 +104,7 @@ second_file INCLUDE inc_file2.inc''')
     assert nexus_file == expected_nexus_file
 
 
-def test_generate_file_include_structure_nested_includes(mocker, fixture_for_osstat_pathlib):
+def test_generate_file_include_structure_nested_includes(mocker):
     # Arrange
     file_path = 'test_file_path.dat'
     test_file_contents = 'basic_file INCLUDE inc_file1.inc something after'
@@ -145,7 +145,7 @@ def test_generate_file_include_structure_nested_includes(mocker, fixture_for_oss
     assert nexus_file == expected_nexus_file
 
 
-def test_generate_file_include_structure_origin_path(mocker, fixture_for_osstat_pathlib):
+def test_generate_file_include_structure_origin_path(mocker):
     # Arrange
     file_path = '/origin/path/test_file_path.dat'
     test_file_contents = 'basic_file INCLUDE nexus_data/inc_file1.inc'
@@ -253,7 +253,7 @@ def test_iterate_line_nested(max_depth, expected_results):
 ], ids=['basic_test', 'newline',
         'comment',
         'another_token', 'second_token'])
-def test_generate_file_include_structure_skip_array(mocker, fixture_for_osstat_pathlib, test_file_contents):
+def test_generate_file_include_structure_skip_array(mocker, test_file_contents):
     # Arrange
     file_path = '/origin/path/test_file_path.dat'
     include_file_contents = 'inc file contents'
@@ -330,7 +330,7 @@ KX ZVAR
 ], ids=['basic case', 'exclude from start of file'])
 def test_generate_file_include_structure_skip_file_with_nested_array(mocker: MockerFixture,
                                                                      file_with_nested_grid_array_contents: str,
-                                                                     expected_file_contents: str, fixture_for_osstat_pathlib):
+                                                                     expected_file_contents: str):
     # Arrange
     file_path = '/origin/path/test_file_path.dat'
     parent_file_contents = 'INCLUDE nexus_data/inc_file1.inc'
@@ -358,7 +358,7 @@ def test_generate_file_include_structure_skip_file_with_nested_array(mocker: Moc
     assert nexus_file.include_objects[0].file_content_as_list == expected_included_file.file_content_as_list
     assert nexus_file.include_objects[0] == expected_included_file
 
-def test_generate_file_include_structure_not_skipping_file(mocker: MockerFixture, fixture_for_osstat_pathlib):
+def test_generate_file_include_structure_not_skipping_file(mocker: MockerFixture):
     # Arrange
     file_contents = """POROSITY CON 0.31012
 CORP VALUE INCLUDE nested/include/file/path.dat
@@ -415,7 +415,7 @@ KZ CON 1
                           ],
                          ids=['basic_test']
                          )
-def test_file_object_locations(mocker, fixture_for_osstat_pathlib, test_file_contents, expected_results):
+def test_file_object_locations(mocker, test_file_contents, expected_results):
     # Arrange
     mocker.patch.object(uuid, 'uuid4', side_effect=['file_uuid', 'uuid1', 'uuid2'])
 
@@ -430,14 +430,14 @@ def test_file_object_locations(mocker, fixture_for_osstat_pathlib, test_file_con
     wells_file = NexusFile.generate_file_include_structure(file_path='wells.dat', skip_arrays=True, )
 
     # Act
-    load_wells(wells_file, start_date='01/01/2012', default_units=UnitSystem.ENGLISH, date_format=DateFormat.DD_MM_YYYY)
+    load_wells(wells_file, start_date='01/01/2012', default_units=UnitSystem.ENGLISH, model_date_format=DateFormat.DD_MM_YYYY)
     result = wells_file.object_locations
 
     # Assert
     assert result == expected_results
 
 
-def test_line_locations_complex(mocker, fixture_for_osstat_pathlib):
+def test_line_locations_complex(mocker):
     # Arrange
     # We need 2 lots of the mocked out uuid one for init of the expected files and one set for the try statement
     mocker.patch.object(uuid, 'uuid4', side_effect=['uuid_inc1', 'uuid_inc2', 'parent_file',
@@ -499,7 +499,7 @@ second_file INCLUDE inc_file2.inc continuation''')
     assert nexus_file.line_locations == expected_nexus_file.line_locations
 
 
-def test_line_locations_nested(mocker, fixture_for_osstat_pathlib):
+def test_line_locations_nested(mocker):
     # Arrange
     # We need 2 lots of the mocked out uuid one for init of the expected files and one set for the try statement
 
@@ -561,7 +561,7 @@ continuation''')
     assert nexus_file.line_locations == expected_nexus_file.line_locations
 
 
-def test_line_locations_with_additional_lines(mocker, fixture_for_osstat_pathlib):
+def test_line_locations_with_additional_lines(mocker):
     # Arrange
     # We need 2 lots of the mocked out uuid one for init of the expected files and one set for the try statement
 
@@ -640,7 +640,7 @@ continuation''')
     (5, 1, 2),
     (2, 1, 1),
 ])
-def test_find_which_include_file(mocker, fixture_for_osstat_pathlib, index, expected_file_number, expected_index_in_file):
+def test_find_which_include_file(mocker, index, expected_file_number, expected_index_in_file):
     # Arrange
     # We need 2 lots of the mocked out uuid one for init of the expected files and one set for the try statement
 
@@ -738,7 +738,7 @@ continuation''')
                           ],
                          ids=['basic_test']
                          )
-def test_update_object_locations(mocker, fixture_for_osstat_pathlib, test_file_contents, expected_results):
+def test_update_object_locations(mocker, test_file_contents, expected_results):
     # Arrange
     mocker.patch.object(uuid, 'uuid4', side_effect=['file_uuid', 'uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'])
 
@@ -752,7 +752,7 @@ def test_update_object_locations(mocker, fixture_for_osstat_pathlib, test_file_c
 
     wells_file = NexusFile.generate_file_include_structure(file_path='wells.dat', skip_arrays=True, )
     # load the uuids
-    load_wells(wells_file, start_date='01/01/2012', default_units=UnitSystem.ENGLISH, date_format=DateFormat.DD_MM_YYYY)
+    load_wells(wells_file, start_date='01/01/2012', default_units=UnitSystem.ENGLISH, model_date_format=DateFormat.DD_MM_YYYY)
 
     # Act
     # effectively add 2 lines at location 5
@@ -842,7 +842,7 @@ def test_remove_from_file_as_list(mocker):
         'test_file_content\nInCluDE New_FiLe_Path.inc\nend of the file\n',
     )
 ], ids=['basic', 'on another line', 'next line'])
-def test_update_include_location_in_file_as_list(mocker, fixture_for_osstat_pathlib, file_content, expected_file_content):
+def test_update_include_location_in_file_as_list(mocker, file_content, expected_file_content):
     # Arrange
     file_path = '/root/file.dat'
     def mock_open_wrapper(filename, mode):
@@ -868,7 +868,7 @@ def test_update_include_location_in_file_as_list(mocker, fixture_for_osstat_path
     assert nexus_file.file_modified
 
 
-def test_write_to_file(mocker, fixture_for_osstat_pathlib):
+def test_write_to_file(mocker):
     # Arrange
     file_content = '''test_file_content\nInCluDE original_include.inc\nINCLUDE
                     /abs_path/another_file.inc\nend of the file\n'''
@@ -889,6 +889,14 @@ def test_write_to_file(mocker, fixture_for_osstat_pathlib):
 
     writing_mock_open = mocker.mock_open()
     mocker.patch("builtins.open", writing_mock_open)
+
+    # Mock out the file exists
+    file_exists_mock = MagicMock(side_effect=lambda x: False)
+    mocker.patch('os.path.exists', file_exists_mock)
+
+    # mock out makedirs
+    makedirs_mock = MagicMock()
+    mocker.patch('os.makedirs', makedirs_mock)
     # Act
     nexus_file.write_to_file(new_file_path, write_includes=True, write_out_all_files=True)
     # Assert
@@ -898,7 +906,7 @@ def test_write_to_file(mocker, fixture_for_osstat_pathlib):
     assert not nexus_file.file_modified
 
 
-def test_write_to_file_only_modified(mocker, fixture_for_osstat_pathlib):
+def test_write_to_file_only_modified(mocker):
     # Arrange
     file_content = '''test_file_content\nInCluDE original_include.inc\nINCLUDE
                     /abs_path/another_file.inc\nend of the file\n'''
@@ -922,6 +930,17 @@ def test_write_to_file_only_modified(mocker, fixture_for_osstat_pathlib):
     nexus_file.include_objects[0]._file_modified_set(True)
     writing_mock_open = mocker.mock_open()
     mocker.patch("builtins.open", writing_mock_open)
+    # mock out makedirs
+    makedirs_mock = MagicMock()
+    mocker.patch('os.makedirs', makedirs_mock)
+    # Mock out the file exists
+    file_exists_mock = MagicMock(side_effect=lambda x: False)
+    mocker.patch('os.path.exists', file_exists_mock)
+
+    # mock out makedirs
+    makedirs_mock = MagicMock()
+    mocker.patch('os.makedirs', makedirs_mock)
+
     # Act
     nexus_file.write_to_file(new_file_path, write_includes=True, write_out_all_files=False)
     # Assert
@@ -932,26 +951,27 @@ def test_write_to_file_only_modified(mocker, fixture_for_osstat_pathlib):
     assert list_of_writes[-1].args[0] == expected_file_content
 
 
-@pytest.mark.parametrize('location, file_as_list, error', [
-    (None, None, 'No file path to write to'),
-    ('path/file.dat', None, 'No file data to write out'),
-], ids=['nothing', 'no file as list',])
-def test_write_to_file_exit_points(mocker, fixture_for_osstat_pathlib, location, file_as_list, error):
+@pytest.mark.parametrize('location, file_as_list, overwrite_file, expected_error', [
+    ('path/file.dat', None, True, 'No file data to write out, instead found None'),
+    (None, ['file_content'], False, 'No file path to write to, and overwrite_file set to False'),
+], ids=['no file as list', 'no overwrite'])
+def test_write_to_file_exit_points(mocker, location, file_as_list, overwrite_file,
+                                   expected_error):
     # Arrange
     empty_file = NexusFile(location=location, file_content_as_list=file_as_list)
     if file_as_list is None:
         empty_file.file_content_as_list = None
     # Act Assert
     with pytest.raises(ValueError) as ve:
-        empty_file.write_to_file()
-    assert error in str(ve.value)
+        empty_file.write_to_file(overwrite_file=overwrite_file)
+    assert str(ve.value) == expected_error
 
 
 @pytest.mark.parametrize('location, file_as_list, include_locations, error', [
     ('location.dat', ['file_content'], None, 'No include locations found'),
     ('location.dat', None, ['include_loc.dat'], 'No file content found within file'),
 ], ids=['No includes locs', 'No file content'])
-def test_update_include_location_in_file_as_list_exit_points(mocker, fixture_for_osstat_pathlib,
+def test_update_include_location_in_file_as_list_exit_points(mocker,
                                                              location, file_as_list, include_locations, error):
     # Arrange
     empty_file = NexusFile(location=location, file_content_as_list=file_as_list, include_locations=include_locations)
@@ -962,20 +982,21 @@ def test_update_include_location_in_file_as_list_exit_points(mocker, fixture_for
     assert error in str(ve.value)
 
 
-def test_write_to_file_failure(mocker, fixture_for_osstat_pathlib):
+def test_write_to_file_failure(mocker):
     # Arrange
     file_content = '''test_file_content'''
     file = NexusFile(location='somefile.dat', origin=None, file_content_as_list=[file_content])
     writing_mock_open = mocker.mock_open()
     mocker.patch("builtins.open", writing_mock_open)
+    mocker.patch('os.path.exists', MagicMock(return_value=True))
     # Act
     with pytest.raises(ValueError) as ve:
         file.write_to_file(new_file_path='new_somefile.dat', write_includes=True, write_out_all_files=True,
-                           overwrite_file=True)
-    assert str(ve.value) == f'Cannot overwrite file with a new file path provided at new_somefile.dat'
+                           overwrite_file=False)
+    assert str(ve.value) == 'File already exists at new_somefile.dat and overwrite_file set to False'
 
 
-def test_missing_file(mocker, fixture_for_osstat_pathlib):
+def test_missing_file(mocker):
     # Arrange
     file_content = '''test_file_content\nInCluDE original_include.inc\nINCLUDE'''
     file_path = '/root/file.dat'
@@ -1005,7 +1026,7 @@ def test_missing_file(mocker, fixture_for_osstat_pathlib):
     assert warn_msg[0].message.args[0] == 'FileNotFoundError when trying to access file at /root/file.dat'
     assert warn_msg[1].message.args[0] == 'No file found for: original_include.inc while loading /root/file.dat'
 
-def test_group_not_found(mocker, fixture_for_osstat_pathlib):
+def test_group_not_found(mocker):
     # Arrange
     file_content = '''test_file_content\nInCluDE original_include.inc\nINCLUDE'''
     file_path = '/root/file.dat'

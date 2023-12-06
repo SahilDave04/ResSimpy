@@ -9,6 +9,7 @@ import sys
 
 from ResSimpy.Enums.UnitsEnum import UnitSystem
 from ResSimpy.Nexus.NexusEnums import DateFormatEnum
+from ResSimpy.Nexus.NexusEnums.DateFormatEnum import DateFormat
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -17,7 +18,6 @@ else:
 
 from ResSimpy.Completion import Completion
 from ResSimpy.Nexus.DataModels.NexusRelPermEndPoint import NexusRelPermEndPoint
-from ResSimpy.Utils.generic_repr import generic_repr
 from ResSimpy.Utils.to_dict_generic import to_dict
 
 
@@ -30,7 +30,6 @@ class NexusCompletion(Completion):
         well_indices (Optional[float]): Well index used to calculate performance of the completion. 'WI' in Nexus
         partial_perf (Optional[float]): Partial penetration factor. 'PPERF' in Nexus
         cell_number (Optional[int]): cell number for the completion in unstructured grids. 'CELL' in Nexus
-        bore_radius (Optional[float]): Well bore radius. 'RADB' in Nexus
         portype (Optional[str]): indicates the pore type for the completion FRACTURE OR MATRIX. 'PORTYPE' in Nexus
         sector (None | str | int): the section of the wellbore to which this completion flows. 'SECT' in Nexus
         khmult (Optional[float]): the multiplier that is applied to the permeability-thickness. 'KHMULT' in Nexus.
@@ -71,7 +70,7 @@ class NexusCompletion(Completion):
                  depth_to_bottom_str: Optional[str] = None, rel_perm_method: Optional[int] = None,
                  dfactor: Optional[float] = None, status: Optional[str] = None, partial_perf: Optional[float] = None,
                  cell_number: Optional[int] = None, perm_thickness_ovr: Optional[float] = None,
-                 bore_radius: Optional[float] = None, fracture_mult: Optional[float] = None,
+                 peaceman_well_block_radius: Optional[float] = None, fracture_mult: Optional[float] = None,
                  sector: Union[None, str, int] = None, well_group: Optional[str] = None, zone: Optional[int] = None,
                  angle_open_flow: Optional[float] = None, temperature: Optional[float] = None,
                  flowsector: Optional[int] = None, parent_node: Optional[str] = None, mdcon: Optional[float] = None,
@@ -87,12 +86,12 @@ class NexusCompletion(Completion):
                  ) -> None:
 
         self.__measured_depth = measured_depth
-        self.__well_indices = well_indices
+
+        self.__well_indices = well_indices  # TODO: rename this to singular
         self.__partial_perf = partial_perf
         self.__depth_to_top_str = depth_to_top_str
         self.__depth_to_bottom_str = depth_to_bottom_str
         self.__cell_number = cell_number
-        self.__bore_radius = bore_radius
         self.__fracture_mult = fracture_mult
         self.__sector = sector
         self.__well_group = well_group
@@ -118,10 +117,7 @@ class NexusCompletion(Completion):
                          angle_a=angle_a, angle_v=angle_v, grid=grid, depth_to_top=depth_to_top,
                          depth_to_bottom=depth_to_bottom, perm_thickness_ovr=perm_thickness_ovr, dfactor=dfactor,
                          rel_perm_method=rel_perm_method, status=status, date_format=date_format, start_date=start_date,
-                         unit_system=unit_system)
-
-    def __repr__(self) -> str:
-        return generic_repr(self)
+                         unit_system=unit_system, peaceman_well_block_radius=peaceman_well_block_radius)
 
     @property
     def measured_depth(self):
@@ -138,10 +134,6 @@ class NexusCompletion(Completion):
     @property
     def cell_number(self):
         return self.__cell_number
-
-    @property
-    def bore_radius(self):
-        return self.__bore_radius
 
     @property
     def portype(self):
@@ -291,7 +283,7 @@ class NexusCompletion(Completion):
             'D': ('dfactor', float),
             'IRELPM': ('rel_perm_method', int),
             'STAT': ('status', str),
-            'RADB': ('bore_radius', float),
+            'RADB': ('peaceman_well_block_radius', float),
             'PORTYPE': ('portype', str),
             'FM': ('fracture_mult', float),
             'SECT': ('sector', int),
@@ -321,7 +313,7 @@ class NexusCompletion(Completion):
         return [v[0] for v in NexusCompletion.get_keyword_mapping().values()]
 
     @classmethod
-    def from_dict(cls, input_dictionary: dict[str, None | float | int | str]) -> Self:
+    def from_dict(cls, input_dictionary: dict[str, None | float | int | str], date_format: DateFormat) -> Self:
         """Generates a NexusCompletion from a dictionary."""
         for input_attr in input_dictionary:
             if input_attr == 'date' or input_attr == 'unit_system' or input_attr == 'date_format':
@@ -329,14 +321,17 @@ class NexusCompletion(Completion):
             elif input_attr not in cls.valid_attributes():
                 raise AttributeError(f'Unexpected keyword "{input_attr}" found within {input_dictionary}')
         date = input_dictionary.get('date', None)
-        date_format = input_dictionary.get('date_format')
-        if not isinstance(date_format, DateFormatEnum.DateFormat):
-            raise AttributeError(f'No date_format provided for the completion, instead got {date_format=}')
+        date_format_str = input_dictionary.get('date_format')
+        if date_format_str is not None and isinstance(date_format_str, str):
+            converted_date_format_str = date_format_str.replace('/', '_')
+            completion_date_format = DateFormat[converted_date_format_str]
+        else:
+            completion_date_format = date_format
         if date is None:
             raise AttributeError(f'No date provided for the completion, instead got {date=}')
 
         date = str(date)
-        constructed_class = cls(date=date, date_format=date_format)
+        constructed_class = cls(date=date, date_format=completion_date_format)
         constructed_class.update(input_dictionary)
         return constructed_class
 
